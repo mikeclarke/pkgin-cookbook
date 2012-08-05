@@ -75,7 +75,7 @@ class Chef
           end
           
           # see whats available - set candidate_version
-          shell_out("pkgin avail apache | grep ^apache-[0-9] | awk '{ print $1 }'").stdout.each_line do | line |
+          shell_out("pkgin avail apache | grep ^#{package}-[0-9] | awk '{ print $1 }'").stdout.each_line do | line |
             package_info = line.split(/(-[0-9])/)
             package_name = package_info[0]
             package_version = (package_info[1]+package_info[2]).reverse.chop.reverse
