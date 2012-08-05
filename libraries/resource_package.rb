@@ -1,7 +1,7 @@
 #
 # Author:: Sean OMeara (<someara@opscode.com>)
 # Cookbook Name:: pkgin
-# Resource:: package
+# Provider:: package
 #
 # Copyright:: 2012, Opscode, Inc.
 #
@@ -17,7 +17,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+require 'chef/resource/package'
 
-actions :install, :remove
-
-attribute :name, :kind_of => String, :name_attribute => true
+class Chef
+  class Resource
+    class PkginPackage < ::Chef::Resource::Package
+      def initialize(name, run_context = nil)
+        super(name, run_context)
+        @resource_name = :pkgin_package
+        @provider      = Chef::Provider::Package::PkginPackage
+        @allowed_actions = [ :install, :remove, :upgrade]
+      end
+    end
+  end
+end
