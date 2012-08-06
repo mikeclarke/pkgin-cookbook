@@ -33,6 +33,7 @@ class Chef
         installed = false
         depends = false
 
+
         # def define_resource_requirements
         #   super
         #
@@ -68,9 +69,6 @@ class Chef
               else
                 @current_resource.version(nil)
               end
-             
-              Chef::Log.info("Installed package name: #{package_name}")
-              Chef::Log.info("Installed package version: #{package_version}")
             end
           end
           
@@ -84,8 +82,7 @@ class Chef
                 
           def install_package(name, version)
             full_package_name = "#{name}-#{version}"
-            run_command_with_systems_locale(
-              :command => "pkgin -y install #{full_package_name}")
+            shell_out!("pkgin -y install #{full_package_name}")
           end
 
           def upgrade_package(name, version)
@@ -94,8 +91,7 @@ class Chef
           
           def remove_package(name, version)
             full_package_name = "#{name}-#{version}"
-            run_command_with_systems_locale(
-              :command => "pkgin -y remove #{full_package_name}")
+            shell_out!("pkgin -y remove #{full_package_name}")
           end
           
         end
