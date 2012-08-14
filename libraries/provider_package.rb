@@ -1,7 +1,7 @@
 #
 # Author:: Sean OMeara (<someara@opscode.com>)
-# Cookbook Name:: pkgin
-# Provider:: package
+
+# Provider:: Pkgin
 #
 # Copyright:: 2012, Opscode, Inc.
 #
@@ -21,22 +21,19 @@
 require 'chef/provider/package'
 require 'chef/mixin/command'
 require 'chef/resource/package'
-require 'chef/mixin/get_source_from_package'
+require 'chef/mixin/shell_out'
 
 class Chef
   class Provider
     class Package
-      class PkginPackage < Chef::Provider::Package
+      class Pkgin < Chef::Provider::Package
         
         include Chef::Mixin::ShellOut
-
-        installed = false
-        depends = false
-
+        attr_accessor :is_virtual_package
 
         def define_resource_requirements
           super
-        
+          
           requirements.assert(:all_actions) do |a|
             a.assertion { ! @candidate_version.nil? }
             a.failure_message Chef::Exceptions::Package, "Package #{@new_resource.package_name} not found"
@@ -52,48 +49,53 @@ class Chef
         end
         
         def check_package_state(package)
-          Chef::Log.info("Checking package status for #{package}")
+          Chef::Log.debug("Checking package status for #{package}")
 
-          # see whats installed
-          shell_out("pkg_info #{package}").stdout.each_line do | line |
-            case line
-            when /Information for (.*)/
-              installed = true
-              package_info = $1.split(/(-[0-9])/)
-              package_name = package_info[0]
-              package_version = (package_info[1]+package_info[2]).chop.reverse.chop.reverse
-
-              if installed
-                @current_resource.version(package_version)
-              else
-                @current_resource.version(nil)
-              end
-            end
+          # see what is installed
+          package_version = nil
+          info = shell_out!("pkg_info -E #{package}", :env => nil, :returns => [0,1])
+          
+          if !info.stdout.empty?
+            package_info = info.stdout.split(/(-[0-9])/)
+            package_name = package_info[0]
+            package_version = (package_info[1]+package_info[2]).chop.reverse.chop.reverse
+          end
+          
+          if !package_version
+            @current_resource.version(nil)
+          else
+            @current_resource.version(package_version)
           end
           
           # see whats available - set candidate_version
-          shell_out("pkgin avail apache | grep ^#{package}-[0-9] | awk '{ print $1 }'").stdout.each_line do | line |
-            package_info = line.split(/(-[0-9])/)
-            package_name = package_info[0]
-            package_version = (package_info[1]+package_info[2]).reverse.chop.reverse
-            @candidate_version = package_version
-          end
-                
-          def install_package(name, version)
-            full_package_name = "#{name}-#{version}"
-            shell_out!("pkgin -y install #{full_package_name}")
-          end
-
-          def upgrade_package(name, version)
-            install_package(name, version)
+          available_info = shell_out!("pkgin avail | grep ^#{package}-[0-9] | awk '{ print $1 }'", :env => nil, :returns => [0,1])
+          if !available_info.stdout.empty?
+            candidate_info = available_info.stdout.split(/(-[0-9])/)
+            candidate_name = candidate_info[0]
+            candidate_version = (candidate_info[1]+candidate_info[2]).chop.reverse.chop.reverse
           end
           
-          def remove_package(name, version)
-            full_package_name = "#{name}-#{version}"
-            shell_out!("pkgin -y remove #{full_package_name}")
-          end
-          
+          if !candidate_version
+            @candidate_version = nil
+          else
+            @candidate_version = candidate_version
+          end          
         end
+        
+        def install_package(name, version)
+          full_package_name = "#{name}-#{version}"
+          shell_out!("pkgin -y install #{full_package_name}")
+        end
+
+        def upgrade_package(name, version)
+          install_package(name, version)
+        end
+          
+        def remove_package(name, version)
+          full_package_name = "#{name}-#{version}"
+          shell_out!("pkgin -y remove #{full_package_name}")
+        end  
+        
       end
     end
   end
