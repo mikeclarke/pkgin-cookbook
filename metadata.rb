@@ -1,3 +1,4 @@
+name             "pkgin"
 maintainer       "Opscode, Inc"
 maintainer_email "someara@opscode.com"
 license          "Apache 2.0"
